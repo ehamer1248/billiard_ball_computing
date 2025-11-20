@@ -9,17 +9,9 @@ GRID_SIZE = 25  # 25x25 grid
 CELL_SIZE = 35
 LABEL_MARGIN = 30  # Space for labels
 TITLE_MARGIN = 40  # Space for title at top
-A_COL = 0
-A_ROW = 4
-B_COL = 3
-B_ROW = 1
-CIN_COL = 8
-CIN_ROW = 20
-SUM_COL = 14
-SUM_ROW = 1
-COUT_COL = 20
-COUT_ROW = 9
-WINDOW_WIDTH = GRID_SIZE * CELL_SIZE + LABEL_MARGIN
+MENU_WIDTH = 200
+GRID_WIDTH = GRID_SIZE * CELL_SIZE + LABEL_MARGIN 
+WINDOW_WIDTH = GRID_SIZE * CELL_SIZE + MENU_WIDTH
 WINDOW_HEIGHT = GRID_SIZE * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
 
 # Color options
@@ -35,12 +27,16 @@ PURPLE = (200, 100, 255)
 CYAN = (100, 255, 255)
 PINK = (255, 150, 200)
 
-# Create the display
+# create display
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Billiard Ball Full Adder")
+pygame.display.set_caption("Billiard Ball Simulator")
 
 # Grid data
 grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+
+# data structures for balls and mirrors
+balls = []
+mirrors = []
 
 # Mirror properties
 class Mirror:
@@ -137,6 +133,19 @@ class Ball:
                 # Move towards target
                 self.x += (dx / distance) * self.speed
                 self.y += (dy / distance) * self.speed
+                
+    def reset(self):
+        self.x = (self.grid_col * CELL_SIZE + CELL_SIZE // 2) + LABEL_MARGIN
+        self.y = (self.grid_row * CELL_SIZE + CELL_SIZE // 2) + LABEL_MARGIN + TITLE_MARGIN
+        self.grid_row = self.initial_row
+        self.grid_col = self.initial_col
+        self.moving = False
+        self.reached_output = False
+        self.leave_output = False
+        self.left_input = False
+        self.leave_input = False
+        self.stop_tick = 0
+        
     
     # draw the art for the balls
     def draw(self, surface):
@@ -145,27 +154,28 @@ class Ball:
         pygame.draw.circle(surface, WHITE, 
                          (int(self.x - self.radius//3), int(self.y - self.radius//3)), 
                          self.radius//4)
-
-# create mirror configuration
-m_and1 = Mirror(6,2,'\\')
-# m_and2 = Mirror(5,4,'/')
-m_xorA = Mirror(4,7,"\\")
-m_xorB = Mirror(8,3,"\\")
-m_sumA1 = Mirror(10,7,'\\')
-m_sumA2 = Mirror(10,14,'/')
-m_sumCin = Mirror(1,8,'/')
-m_sumB1 = Mirror(8,15,'/')
-m_sumB2 = Mirror(1,15,'\\')
-m_coutAandB = Mirror(6,20,'\\')
-mirrors = [m_and1,m_xorA,m_xorB,m_sumA1,m_sumA2,m_sumCin,m_sumB1,m_sumB2,m_coutAandB]
-
-# default configuration A=1, B=1, C=1
-A = Ball(4, 0, 1, 0, RED)
-B = Ball(1, 3, 0, 1, GREEN)
-Cin = Ball(20,8,0,-1,BLACK)
-and1 = Ball(13, 5, 0, -1, BLUE)
-balls = [A,B,Cin]
-
+class MenuButton:
+    def __init__(self,x,y,width,height,label,type,data=None):
+        self.rect = pygame.Rect(x,y,width,height)
+        self.label = label
+        self.type = type
+        self.selected = False
+        self.data = data
+    def draw(self, surface):
+        color = BLUE
+        if self.selected:
+            color = WHITE
+        pygame.draw.rect(surface, color, self.rect)
+        pygame.draw.rect(surface, BLACK, self.rect,2)
+        
+        font = pygame.font.Font(None,20)
+        label = font.render(self.label,True,BLACK)
+        label_pos = label.get_rect(center=self.rect.center)
+        surface.blit(label, label_pos)
+    
+    def on_click(self,pos):
+        return self.rect.collidepoint(pos)
+        
 
 # function for ball collsion
 def ball_collision(orientation,dx,dy):
@@ -185,7 +195,7 @@ def draw_grid():
         pygame.draw.line(screen, GRAY, (x_pos, LABEL_MARGIN + TITLE_MARGIN), (x_pos, WINDOW_HEIGHT))
     for y in range(0, GRID_SIZE + 1):
         y_pos = y * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-        pygame.draw.line(screen, GRAY, (LABEL_MARGIN, y_pos), (WINDOW_WIDTH, y_pos))
+        pygame.draw.line(screen, GRAY, (LABEL_MARGIN, y_pos), (GRID_WIDTH, y_pos))
 
 # function to draw grid labels
 def draw_labels():
@@ -206,158 +216,140 @@ def draw_labels():
         y = row * CELL_SIZE + CELL_SIZE // 2 + LABEL_MARGIN + TITLE_MARGIN
         text_rect = label.get_rect(center=(x, y))
         screen.blit(label, text_rect)
-   
-# function draw outputs and input squares             
-def draw_io():
-    sum_x =  SUM_COL * CELL_SIZE + LABEL_MARGIN
-    sum_y =  SUM_ROW * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-    cout_x =  COUT_COL * CELL_SIZE + LABEL_MARGIN
-    cout_y =  COUT_ROW * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-    cin_x =  CIN_COL * CELL_SIZE + LABEL_MARGIN
-    cin_y =  CIN_ROW * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-    a_x =  A_COL * CELL_SIZE + LABEL_MARGIN
-    a_y =  A_ROW * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-    b_x =  B_COL * CELL_SIZE + LABEL_MARGIN
-    b_y =  B_ROW * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-    
-    pygame.draw.rect(screen, PURPLE, (sum_x, sum_y, CELL_SIZE, CELL_SIZE))
-    pygame.draw.rect(screen, CYAN, (cout_x, cout_y, CELL_SIZE, CELL_SIZE))
-    pygame.draw.rect(screen, (255, 180, 180), (a_x, a_y, CELL_SIZE, CELL_SIZE))
-    pygame.draw.rect(screen, (150, 210, 175), (b_x, b_y, CELL_SIZE, CELL_SIZE))
-    pygame.draw.rect(screen, GRAY, (cin_x, cin_y, CELL_SIZE, CELL_SIZE))
 
 def main():
-    global balls
+   
+    global balls, mirrors
+    edit_mode = True
+    selected_tool = None
+    
+    
+    button_y = TITLE_MARGIN + 10
+    button_spacing = 50
+    menuButtons = [
+        MenuButton(GRID_WIDTH + 10, button_y, 180, 50, "Mirror /", "mirror", "/"),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing), 180, 50, "Mirror \\", "mirror", "\\"),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 2), 180, 50, "Ball Up","ball", (0,-1,RED)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 3), 180, 50, "Ball Down", "ball", (0,1,BLUE)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 4), 180, 50, "Ball Left", "ball", (-1,0,GREEN)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 5), 180, 50, "Ball Right", "ball",(1,0,ORANGE)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Erase", "erase",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Simulate", "mode",None)
+    ]
+    
+    # clock and other setup
     clock = pygame.time.Clock()
     running = True
     tick_count = 0
     reverse = False
     reverse_change = False
     first_space = True
-   
-    config_text = "A=1, B=1, Cin=1"  # Default configuration
- 
-    font = pygame.font.Font(None, 24)
     
     while running:
-        # increment or decrement tick count to track balls for reversing
-        if not reverse:
+        # increment or decrement tick count to track balls for reversing but not during edit mode
+        if not edit_mode and not reverse:
             tick_count += 1
-        else:
+        elif not edit_mode and reverse:
             tick_count -= 1
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-                
             
+            # handle mouse clicks
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+        
+                for button in menuButtons:
+                    if button.on_click(mouse_pos):
+                        print("mode button")
+                        if button.type == "mode":
+                            edit_mode = not edit_mode
+                            print("edit mode:")
+                            print(edit_mode)
+                            if not edit_mode:
+                                button.label = "Simulate"
+                                for ball in balls:
+                                    ball.reset()
+                                tick_count = 0
+                            else:
+                                button.label = "Edit"
+                        else:
+                            print("tool button")
+                            for b in menuButtons:
+                                b.selected = False
+                            button.selected = True
+                            selected_tool = button
+                            print(selected_tool.type)
+
+                            
+                # get grid coordinates to know what cell to place element in
+                if edit_mode and mouse_pos[0] < GRID_WIDTH and selected_tool:
+                    grid_col = (mouse_pos[0] - LABEL_MARGIN) // CELL_SIZE
+                    grid_row = (mouse_pos[1] - LABEL_MARGIN - TITLE_MARGIN) // CELL_SIZE
+                    
+                    # check that it is within grid bounds
+                    if 0 <= grid_col < GRID_SIZE and 0 <= grid_row < GRID_SIZE:
+                        if event.button == 1:
+                            print("trying to add something")
+                            # place type
+                            if selected_tool.type == "mirror":
+                                print("mirror")
+                                mirrors = [m for m in mirrors if not (m.grid_col == grid_col and m.grid_row == grid_row)]
+                                mirrors.append(Mirror(grid_row, grid_col, selected_tool.data))
+                            elif selected_tool.type == "ball":
+                                print("ball")
+                                dx, dy, color = selected_tool.data
+                                balls = [b for b in balls if not (b.initial_col == grid_col and b.initial_row == grid_row)]
+                                balls.append(Ball(grid_row, grid_col, dx, dy, color))
+                                
+                            elif selected_tool.type == "erase":
+                                mirrors = [m for m in mirrors if not (m.grid_col == grid_col and m.grid_row == grid_row)]
+                                balls = [b for b in balls if not (b.initial_col == grid_col and b.initial_row == grid_row)]
+                        print(balls)
+                        print(mirrors)
+                                
             # setting up keyboard inputs
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    if not first_space:
-                        first_space = True
-                        space_tick = tick_count
-                    for ball in balls:
-                        ball.moving = True
-                elif event.key == pygame.K_r:
-                    if reverse:
-                        reverse = False
-                    else:
-                        reverse = True
-                    for ball in balls:
+                
+                if not edit_mode:
+                    if event.key == pygame.K_SPACE:
+                        print("space_pressed")
+                        print("balls:")
+                        print(balls)
+                        if not first_space:
+                            first_space = True
+                            space_tick = tick_count
+                        for ball in balls:
+                            ball.moving = True
+                    elif event.key == pygame.K_r:
+                        if reverse:
+                            reverse = False
+                        else:
+                            reverse = True
+                        for ball in balls:
+                            ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
+                
+
+        # Update ball positions and check if they have hit an output while in simulation mode
+        if not edit_mode:
+            for ball in balls:
+                
+                # track ball leaving input
+                if ball.moving and not ball.left_input:
+                    if not (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
+                        ball.left_input = True
+                        
+                # stop ball in input if it reverses back into it
+                if ball.left_input:
+                    if (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
+                        ball.moving = False
+                        ball.left_input = False
                         ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
-                elif event.key == pygame.K_1:
-                    # case for A=0, B=0, Cin=0
-                    balls = []
-                    config_text = "A=0, B=0, Cin=0"
-                    reverse = False
-                elif event.key == pygame.K_2:
-                    # case for A=0, B=0, Cin=1
-                    Cin = Ball(20,8,0,-1,BLACK)
-                    balls = [Cin]
-                    config_text = "A=0, B=0, Cin=1"
-                    reverse = False
-                elif event.key == pygame.K_3:
-                    # case for A=0, B=1, Cin=0
-                    B = Ball(1, 3, 0, 1, GREEN)
-                    balls = [B]
-                    config_text = "A=0, B=1, Cin=0"
-                    reverse = False
-                elif event.key == pygame.K_4:
-                    # case for A=0, B=1, Cin=1
-                    B = Ball(1, 3, 0, 1, GREEN)
-                    Cin = Ball(20,8,0,-1,BLACK)
-                    balls = [B,Cin]
-                    config_text = "A=0, B=1, Cin=1"
-                    reverse = False
-                elif event.key == pygame.K_5:
-                    # case for A=1, B=0, Cin=0
-                    A = Ball(4, 0, 1, 0, RED)
-                    balls = [A]
-                    config_text = "A=1, B=0, Cin=0"
-                    reverse = False
-                elif event.key == pygame.K_6:
-                    # case for A=1, B=0, Cin=1
-                    A = Ball(4, 0, 1, 0, RED)
-                    Cin = Ball(20,8,0,-1,BLACK)
-                    balls = [A,Cin]
-                    config_text = "A=1, B=0, Cin=1"
-                    reverse = False
-                elif event.key == pygame.K_7:
-                    # case for A=1, B=1, Cin=0
-                    A = Ball(4, 0, 1, 0, RED)
-                    B = Ball(1, 3, 0, 1, GREEN)
-                    balls = [A,B]
-                    config_text = "A=1, B=1, Cin=0"
-                    reverse = False
-                elif event.key == pygame.K_8:
-                    # case for A=1, B=1, Cin=1
-                    A = Ball(4, 0, 1, 0, RED)
-                    B = Ball(1, 3, 0, 1, GREEN)
-                    Cin = Ball(20,8,0,-1,BLACK)
-                    balls = [A,B,Cin]
-                    config_text = "A=1, B=1, Cin=1"
-                    reverse = False
+                        reverse_change = True
                 
-
-        # Update ball positions and check if they have hit an output 
-        for ball in balls:
-            
-            # track ball leaving input
-            if ball.moving and not ball.left_input:
-                if not (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
-                    ball.left_input = True
-                    
-            # stop ball in input if it reverses back into it
-            if ball.left_input:
-                if (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
-                    ball.moving = False
-                    ball.left_input = False
-                    ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
-                    reverse_change = True
-
-            # check if ball has reached output to stop it there
-            if not ball.reached_output:
-                if ((ball.grid_col == SUM_COL and ball.grid_row == SUM_ROW) or (ball.grid_col == COUT_COL and ball.grid_row == COUT_ROW)):
-                    ball.moving = False
-                    ball.reached_output = True
-                    ball.stop_tick = tick_count
-                  
-            # check if ball should leave input on reverse by syncing with ball.stop_tick with every other ball  
-            if ball.reached_output and not ball.leave_output:
-                if reverse and  tick_count <= ball.stop_tick:
-                    ball.moving = True
-                    ball.leave_output = True
-            
-            #  check if ball is done leaving output
-            if ball.leave_output:
-                if (ball.grid_col != SUM_COL and ball.grid_row != SUM_ROW) and (ball.grid_col != COUT_COL and ball.grid_row != COUT_ROW):
-                    ball.leave_output = False
-                    ball.reached_output = False
-                    
-                
-            # update ball position
-            ball.update()
+                # update ball position
+                ball.update()
             
         # handle reverse changes
         if reverse_change:
@@ -369,13 +361,13 @@ def main():
         
         # Draw title with configuration
         title_font = pygame.font.Font(None, 32)
-        title = title_font.render(config_text, True, BLACK)
+        mode_text = "Editor" if edit_mode else "Simulation"
+        title = title_font.render(mode_text, True, BLACK)
         title_rect = title.get_rect(center=(WINDOW_WIDTH // 2, 15))
         screen.blit(title, title_rect)
         
         # draw ui
         draw_labels()
-        draw_io()
         draw_grid()
         
         # draw balls and mirrors from data structures
@@ -383,6 +375,9 @@ def main():
             ball.draw(screen)
         for mirror in mirrors:
             mirror.draw(screen)
+            
+        for b in menuButtons:
+            b.draw(screen)
         
         pygame.display.flip()
         
