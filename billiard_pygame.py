@@ -257,6 +257,100 @@ class MenuButton:
     
     def on_click(self,pos):
         return self.rect.collidepoint(pos)
+    
+    
+class InputBox:
+    def __init__(self, x,y,width,height,text):
+        self.rect = pygame.Rect(x,y,width,height)
+        self.text = text
+        self.font = pygame.font.Font(None,32)
+        self.text_render = self.font.render(text, True, (0,0,0))
+        self.active = False
+        self.color = YELLOW
+    
+    def event_handle(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+                
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                return self.text
+            elif event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif event.key == pygame.K_ESCAPE:
+                return "cancelled"
+            else:
+                if event.unicode.isprintable():
+                    self.text += event.unicode
+            self.text_render = self.font.render(self.text, True, (0,0,0))
+        return None
+    def draw(self,screen):
+        screen.blit(self.text_render, (self.rect.x + 5, self.rect.y + 5))
+        pygame.draw.rect(screen,self.color, self.rect,2)
+        
+        
+class PromptBox:
+    def __init__(self, file_prompt = 'Enter filename:'):
+        self.prompt = file_prompt
+        self.prompt_font = pygame.font.Font(None, 36)
+        self.instruction_font = pygame.font.Font(None, 24)
+        self.active = False
+        self.result = None
+        
+        input_box_width = 400
+        input_box_height = 40
+        input_box_x = (WINDOW_WIDTH - input_box_width) // 2
+        input_box_y = (WINDOW_HEIGHT - input_box_height) // 2
+        
+        self.input_box = InputBox(input_box_x, input_box_y, input_box_width, input_box_height, "model.json")
+        
+    def show_prompt(self,screen):
+        self.active = True
+        self.result = None
+        
+        clock = pygame.time.Clock()
+        background = screen.copy()
+        while self.active:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.active = False
+                    return None
+                
+                result = self.input_box.event_handle(event)
+                
+                if result == "cancelled":
+                    self.active = False
+                    return None
+                elif result is not None:
+                    self.active = False
+                    if not result.endswith('.json'):
+                        result += '.json'
+                    return result
+                
+            screen.blit(background, (0,0))
+            
+            prompt_text_render = self.prompt_font.render(self.prompt, True, BLACK)
+            prompt_text_rect = prompt_text_render.get_rect(center = (WINDOW_WIDTH //2, self.input_box.rect.y - 40)  )
+            screen.blit(prompt_text_render, prompt_text_rect)   
+            
+            
+            self.input_box.draw(screen)    
+            
+            instruction_text_render = self.instruction_font.render("Press Enter to confirm, ESC to cancel", True, BLACK)  
+            instruction_text_rect = instruction_text_render.get_rect(center = (WINDOW_WIDTH//2, self.input_box.rect.y +60))      
+            
+            screen.blit(instruction_text_render,instruction_text_rect)
+            
+            pygame.display.flip()
+            clock.tick(45)
+        
+        
+        return None
+        
+        
         
 
 # function for ball collsion
@@ -299,7 +393,7 @@ def draw_labels():
         text_rect = label.get_rect(center=(x, y))
         screen.blit(label, text_rect)
         
-def save_model(mirrors, balls, outputs,filename="model.json"):
+def save_model(mirrors, balls, outputs,inputs, filename="model.json"):
 
     configuration_dict = {
         'mirrors' : [m.to_dict() for m in mirrors],
@@ -326,7 +420,16 @@ def load_model(filename):
     except FileNotFoundError:
         print(f'{filename} not found')
         return [],[],[],[]
-    
+    except json.JSONDecodeError as e:
+        print(f'{filename} is not valid JSON: {e}')
+        return [], [], [], []
+    except KeyError as e:
+        print(f'{filename} missing required field in object: {e}')
+        return [], [], [], []
+    except (TypeError, ValueError) as e:
+        print(f'{filename} contains invalid data format: {e}')
+    return [], [], [], []
+
 def main():
    
     global balls, mirrors, outputs, inputs
@@ -393,9 +496,15 @@ def main():
                             else:
                                 button.label = "Edit"
                         elif button.type == "save":
-                            save_model(mirrors, balls, outputs)
+                            file_prompt = PromptBox("Enter filename:")
+                            filename = file_prompt.show_prompt(screen)
+                            if filename:
+                                save_model(mirrors, balls, outputs,inputs, filename)
                         elif button.type == "load":
-                            mirrors, balls, outputs = load_model("model.json")
+                            file_prompt = PromptBox("Enter filename:")
+                            filename = file_prompt.show_prompt(screen)
+                            if filename:
+                                mirrors, balls, outputs, inputs = load_model(filename)
                         else:
                             print("tool button")
                             for b in menuButtons:
