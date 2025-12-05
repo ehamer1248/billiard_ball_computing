@@ -34,9 +34,10 @@ pygame.display.set_caption("Billiard Ball Simulator")
 # Grid data
 grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
-# data structures for balls and mirrors
+# data structures for balls, mirrors, and outputs
 balls = []
 mirrors = []
+outputs = []
 
 # Mirror properties
 class Mirror:
@@ -62,8 +63,18 @@ class Mirror:
         else:
             return dy, dx
             
+# Output Block properties
 
-            
+class Output:
+    def __init__(self, grid_row, grid_col):
+        self.grid_row = grid_row
+        self.grid_col = grid_col
+        
+    def draw(self,surface):
+        x = self.grid_col * CELL_SIZE + LABEL_MARGIN
+        y = self.grid_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
+        pygame.draw.rect(surface,CYAN,(x,y,CELL_SIZE,CELL_SIZE))
+        
 # Ball properties
 class Ball:
     def __init__(self, grid_row, grid_col, dx, dy, color):
@@ -82,6 +93,7 @@ class Ball:
         self.stop_tick = 0
         self.reached_output = False
         self.leave_output = False
+        self.output = None
         self.left_input = False
         self.leave_input = False
         self.moving = False
@@ -154,6 +166,8 @@ class Ball:
         pygame.draw.circle(surface, WHITE, 
                          (int(self.x - self.radius//3), int(self.y - self.radius//3)), 
                          self.radius//4)
+        
+
 class MenuButton:
     def __init__(self,x,y,width,height,label,type,data=None):
         self.rect = pygame.Rect(x,y,width,height)
@@ -219,7 +233,7 @@ def draw_labels():
 
 def main():
    
-    global balls, mirrors
+    global balls, mirrors, outputs
     edit_mode = True
     selected_tool = None
     
@@ -233,24 +247,29 @@ def main():
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 3), 180, 50, "Ball Down", "ball", (0,1,BLUE)),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 4), 180, 50, "Ball Left", "ball", (-1,0,GREEN)),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 5), 180, 50, "Ball Right", "ball",(1,0,ORANGE)),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Erase", "erase",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Simulate", "mode",None)
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Output", "output",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Erase", "erase",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Simulate", "mode",None)
+        
     ]
     
-    # clock and other setup
+    # clock and othDer setup
     clock = pygame.time.Clock()
     running = True
     tick_count = 0
+    tick_pause = True
+    balls_in_input = True
     reverse = False
-    reverse_change = False
-    first_space = True
     
     while running:
+        print(tick_count)
+        print(balls_in_input)
         # increment or decrement tick count to track balls for reversing but not during edit mode
-        if not edit_mode and not reverse:
-            tick_count += 1
-        elif not edit_mode and reverse:
-            tick_count -= 1
+        if not tick_pause:
+            if not edit_mode and not reverse:
+                tick_count += 1
+            elif not edit_mode and reverse:
+                tick_count -= 1
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -302,10 +321,15 @@ def main():
                                 dx, dy, color = selected_tool.data
                                 balls = [b for b in balls if not (b.initial_col == grid_col and b.initial_row == grid_row)]
                                 balls.append(Ball(grid_row, grid_col, dx, dy, color))
+                            elif selected_tool.type == "output":
+                                print("output")
+                                outputs = [o for o in outputs if not (o.grid_row == grid_row and o.grid_col == grid_col)]
+                                outputs.append(Output(grid_row,grid_col))
                                 
                             elif selected_tool.type == "erase":
                                 mirrors = [m for m in mirrors if not (m.grid_col == grid_col and m.grid_row == grid_row)]
                                 balls = [b for b in balls if not (b.initial_col == grid_col and b.initial_row == grid_row)]
+                                outputs = [o for o in outputs if not (o.grid_row == grid_row and o.grid_col == grid_col)]
                         print(balls)
                         print(mirrors)
                                 
@@ -317,44 +341,72 @@ def main():
                         print("space_pressed")
                         print("balls:")
                         print(balls)
-                        if not first_space:
-                            first_space = True
-                            space_tick = tick_count
+                        tick_pause = False
+                        if balls_in_input:
+                            balls_in_input = False
+                            reverse = False
                         for ball in balls:
                             ball.moving = True
                     elif event.key == pygame.K_r:
+                        if tick_pause:
+                            tick_pause = False
                         if reverse:
                             reverse = False
                         else:
                             reverse = True
                         for ball in balls:
-                            ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
+                            if not ball.left_input:
+                                reverse = False
+                            else:
+                                ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
                 
 
         # Update ball positions and check if they have hit an output while in simulation mode
         if not edit_mode:
             for ball in balls:
-                
                 # track ball leaving input
                 if ball.moving and not ball.left_input:
                     if not (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
                         ball.left_input = True
                         
-                # stop ball in input if it reverses back into it
+                # stop ball in input if it reverses back into it or output if it reaches it
                 if ball.left_input:
                     if (ball.grid_col == ball.initial_col and ball.grid_row == ball.initial_row):
                         ball.moving = False
                         ball.left_input = False
                         ball.dx, ball.dy = ball_reverse(ball.dx,ball.dy)
-                        reverse_change = True
+                       # reverse_change = True
                 
+                if not ball.reached_output:
+                    for output in outputs:
+                        if (ball.grid_col == output.grid_col and ball.grid_row == output.grid_row):
+                            ball.output = output
+                            ball.reached_output = True
+                            ball.moving = False
+                            ball.stop_tick = tick_count
+                        
+                if ball.reached_output and not ball.leave_output:
+                    if reverse and tick_count <= ball.stop_tick:
+                        ball.moving = True
+                        ball.leave_output = True
+                        
+                if ball.leave_output:
+                    
+                    if (ball.grid_col != ball.output.grid_col or ball.grid_row != ball.output.grid_row):
+                        ball.reached_output = False
+                        ball.leave_output = False
+                        ball.output = None
+                        ball.stop_tick = -1
+                        
                 # update ball position
                 ball.update()
             
-        # handle reverse changes
-        if reverse_change:
-            reverse = not reverse
-            reverse_change = False
+            if not tick_pause:
+                balls_moving = any(ball.moving for ball in balls)
+                balls_in_input = not any(ball.left_input for ball in balls)
+                if not balls_moving:
+                    tick_pause = True
+                    
         
         # Draw everything
         screen.fill(WHITE)
@@ -371,11 +423,12 @@ def main():
         draw_grid()
         
         # draw balls and mirrors from data structures
+        for output in outputs:
+            output.draw(screen)
         for ball in balls:
             ball.draw(screen)
         for mirror in mirrors:
             mirror.draw(screen)
-            
         for b in menuButtons:
             b.draw(screen)
         
