@@ -39,6 +39,7 @@ grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 balls = []
 mirrors = []
 outputs = []
+inputs = []
 
 # Mirror properties
 class Mirror:
@@ -83,6 +84,22 @@ class Output:
         y = self.grid_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
         pygame.draw.rect(surface,CYAN,(x,y,CELL_SIZE,CELL_SIZE))
         
+    def to_dict(self):
+        return {
+            'row' : self.grid_row,
+            'col' : self.grid_col
+        }
+        
+class Input:
+    def __init__(self, grid_row, grid_col):
+        self.grid_row = grid_row
+        self.grid_col = grid_col
+    
+    def draw(self,surface):
+        x = self.grid_col * CELL_SIZE + LABEL_MARGIN
+        y = self.grid_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
+        pygame.draw.rect(surface,BLACK,(x,y,CELL_SIZE,CELL_SIZE),3)
+    
     def to_dict(self):
         return {
             'row' : self.grid_row,
@@ -214,9 +231,9 @@ class Ball:
                          (int(self.x - self.radius//3), int(self.y - self.radius//3)), 
                          self.radius//4)
         
-        x = self.initial_col * CELL_SIZE + LABEL_MARGIN
-        y = self.initial_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
-        pygame.draw.rect(surface,self.color,(x,y,CELL_SIZE,CELL_SIZE),3)
+        # x = self.initial_col * CELL_SIZE + LABEL_MARGIN
+        # y = self.initial_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
+        # pygame.draw.rect(surface,self.color,(x,y,CELL_SIZE,CELL_SIZE),3)
         
 
 class MenuButton:
@@ -287,7 +304,8 @@ def save_model(mirrors, balls, outputs,filename="model.json"):
     configuration_dict = {
         'mirrors' : [m.to_dict() for m in mirrors],
         'balls' : [b.to_dict() for b in balls],
-        'outputs' : [o.to_dict() for o in outputs]
+        'outputs' : [o.to_dict() for o in outputs],
+        'inputs' : [i.to_dict() for i in inputs]
     }
     
     with open(filename, 'w') as fd:
@@ -301,16 +319,17 @@ def load_model(filename):
             configuration = json.load(fd)
         mirrors = [Mirror(m['row'], m['col'], m['orientation']) for m in configuration['mirrors']] 
         balls = [Ball(b['row'], b['col'], b['dx'], b['dy'], b['color']) for b in configuration['balls']] 
-        outputs = [Output(o['row'],o['col']) for o in configuration['outputs']] 
+        outputs = [Output(o['row'],o['col']) for o in configuration['outputs']]
+        inputs = [Input(i['row'], i['col']) for i in configuration['inputs']]
         
-        return mirrors, balls, outputs
+        return mirrors, balls, outputs, inputs
     except FileNotFoundError:
         print(f'{filename} not found')
-        return [],[],[]
+        return [],[],[],[]
     
 def main():
    
-    global balls, mirrors, outputs
+    global balls, mirrors, outputs, inputs
     edit_mode = True
     selected_tool = None
     
@@ -325,10 +344,11 @@ def main():
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 4), 180, 50, "Ball Left", "ball", (-1,0,GREEN)),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 5), 180, 50, "Ball Right", "ball",(1,0,ORANGE)),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Output", "output",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Erase", "erase",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Simulate", "mode",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 9), 180, 50, "Save", "save",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 10), 180, 50, "Load", "load",None)
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Input", "input",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Erase", "erase",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 9), 180, 50, "Simulate", "mode",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 10), 180, 50, "Save", "save",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 11), 180, 50, "Load", "load",None)
         
     ]
     
@@ -408,6 +428,11 @@ def main():
                                 print("output")
                                 outputs = [o for o in outputs if not (o.grid_row == grid_row and o.grid_col == grid_col)]
                                 outputs.append(Output(grid_row,grid_col))
+                            
+                            elif selected_tool.type == "input":
+                                print("input")
+                                inputs = [i for i in inputs if not (i.grid_row == grid_row and i.grid_col == grid_col)]
+                                inputs.append(Input(grid_row, grid_col))
                                 
                             elif selected_tool.type == "erase":
                                 mirrors = [m for m in mirrors if not (m.grid_col == grid_col and m.grid_row == grid_row)]
@@ -508,6 +533,8 @@ def main():
         # draw balls and mirrors from data structures
         for output in outputs:
             output.draw(screen)
+        for i in inputs:
+            i.draw(screen)
         for ball in balls:
             ball.draw(screen)
         for mirror in mirrors:
