@@ -77,7 +77,7 @@ class Output:
         
 # Ball properties
 class Ball:
-    def __init__(self, grid_row, grid_col, dx, dy, color):
+    def __init__(self, grid_row, grid_col, dx,dy, color):
         self.grid_row = grid_row
         self.grid_col = grid_col
         self.initial_row = grid_row
@@ -86,6 +86,8 @@ class Ball:
         # Actual pixel position (centered in cell)
         self.x = (grid_col * CELL_SIZE + CELL_SIZE // 2) + LABEL_MARGIN
         self.y = (grid_row * CELL_SIZE + CELL_SIZE // 2) + LABEL_MARGIN + TITLE_MARGIN
+        self.initial_dx = dx
+        self.intial_dy = dy
         self.dx = dx
         self.dy = dy
         self.radius = CELL_SIZE // 3
@@ -133,14 +135,34 @@ class Ball:
                     
                 # handle ball collision on corners as well
                 for ball in balls:
-                    if (ball.grid_col == self.grid_col - 1 and ball.grid_row == self.grid_row - 1 ) or (ball.grid_col == self.grid_col + 1 and ball.grid_row == self.grid_row + 1 ):
-                        # act as a "/" mirror for both balls involved in the collision
-                        ball.dx, ball.dy = ball_collision('/',ball.dx,ball.dy)
-                        self.dx, self.dy = ball_collision('/',self.dx,self.dy)
-                    elif (ball.grid_col == self.grid_col + 1 and ball.grid_row == self.grid_row - 1 ) or (ball.grid_col == self.grid_col - 1 and ball.grid_row == self.grid_row + 1 ):
-                        ball.dx, ball.dy = ball_collision('\\',ball.dx,ball.dy)
-                        self.dx, self.dy = ball_collision('\\',self.dx,self.dy)
-                                       
+                    col_diff = ball.grid_col - self.grid_col
+                    row_diff = ball.grid_row - self.grid_row
+                    
+                    # check if they are diagonally adjacent to each other
+                    if abs(col_diff) == 1 and abs(row_diff) == 1:
+                        
+                        # check if they will collide in the same place to make sure a collision is necessary
+                        self_next_col = self.grid_col + self.dx
+                        self_next_row = self.grid_row + self.dy
+                        ball_next_col = ball.grid_col + ball.dx
+                        ball_next_row = ball.grid_row + ball.dy
+                        
+                        
+                        if self_next_col == ball_next_col and self_next_row == ball_next_row:
+                            
+                            # set mirror type depending on collision
+                            
+                            # reflection for upper right and lower left
+                            if col_diff == row_diff:
+                                mirror_type = '/'
+                                
+                            # reflection for lower right and upper left
+                            else:
+                                mirror_type = '\\'
+                                
+                            # set new speeds after collision                         
+                            ball.dx, ball.dy = ball_collision(mirror_type,ball.dx,ball.dy)
+                            self.dx, self.dy = ball_collision(mirror_type,self.dx,self.dy)                               
             else:
                 # Move towards target
                 self.x += (dx / distance) * self.speed
@@ -151,6 +173,8 @@ class Ball:
         self.y = (self.grid_row * CELL_SIZE + CELL_SIZE // 2) + LABEL_MARGIN + TITLE_MARGIN
         self.grid_row = self.initial_row
         self.grid_col = self.initial_col
+        self.dx = self.initial_dx
+        self.dy = self.intial_dy
         self.moving = False
         self.reached_output = False
         self.leave_output = False
@@ -159,13 +183,17 @@ class Ball:
         self.stop_tick = 0
         
     
-    # draw the art for the balls
+    # draw the art for the balls and a box around their original position to keep track of the input square
     def draw(self, surface):
         pygame.draw.circle(surface, self.color, (int(self.x), int(self.y)), self.radius)
         # Draw a white highlight
         pygame.draw.circle(surface, WHITE, 
                          (int(self.x - self.radius//3), int(self.y - self.radius//3)), 
                          self.radius//4)
+        
+        x = self.initial_col * CELL_SIZE + LABEL_MARGIN
+        y = self.initial_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
+        pygame.draw.rect(surface,self.color,(x,y,CELL_SIZE,CELL_SIZE),3)
         
 
 class MenuButton:
