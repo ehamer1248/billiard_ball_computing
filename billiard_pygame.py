@@ -1,5 +1,6 @@
 import pygame
 import sys
+import json
 
 # Initialize Pygame
 pygame.init()
@@ -62,6 +63,13 @@ class Mirror:
             return -dy, -dx
         else:
             return dy, dx
+    
+    def to_dict(self):
+        return {
+            'row': self.grid_row,
+            'col': self.grid_col,
+            'orientation': self.orientation
+        }
             
 # Output Block properties
 
@@ -74,6 +82,12 @@ class Output:
         x = self.grid_col * CELL_SIZE + LABEL_MARGIN
         y = self.grid_row * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
         pygame.draw.rect(surface,CYAN,(x,y,CELL_SIZE,CELL_SIZE))
+        
+    def to_dict(self):
+        return {
+            'row' : self.grid_row,
+            'col' : self.grid_col
+        }
         
 # Ball properties
 class Ball:
@@ -99,6 +113,15 @@ class Ball:
         self.left_input = False
         self.leave_input = False
         self.moving = False
+        
+    def to_dict(self):
+        return {
+            'row'  : self.initial_row,
+            'col'  : self.initial_col,
+            'dx'   : self.initial_dx,
+            'dy'   : self.intial_dy,
+            'color': self.color
+        }
         
     # update the ball position
     def update(self):
@@ -258,7 +281,33 @@ def draw_labels():
         y = row * CELL_SIZE + CELL_SIZE // 2 + LABEL_MARGIN + TITLE_MARGIN
         text_rect = label.get_rect(center=(x, y))
         screen.blit(label, text_rect)
+        
+def save_model(mirrors, balls, outputs,filename="model.json"):
 
+    configuration_dict = {
+        'mirrors' : [m.to_dict() for m in mirrors],
+        'balls' : [b.to_dict() for b in balls],
+        'outputs' : [o.to_dict() for o in outputs]
+    }
+    
+    with open(filename, 'w') as fd:
+        json.dump(configuration_dict,fd,indent=2)
+        
+    print(f'Saved model to {filename}')
+
+def load_model(filename):
+    try:
+        with open(filename, 'r') as fd:
+            configuration = json.load(fd)
+        mirrors = [Mirror(m['row'], m['col'], m['orientation']) for m in configuration['mirrors']] 
+        balls = [Ball(b['row'], b['col'], b['dx'], b['dy'], b['color']) for b in configuration['balls']] 
+        outputs = [Output(o['row'],o['col']) for o in configuration['outputs']] 
+        
+        return mirrors, balls, outputs
+    except FileNotFoundError:
+        print(f'{filename} not found')
+        return [],[],[]
+    
 def main():
    
     global balls, mirrors, outputs
@@ -277,7 +326,9 @@ def main():
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 5), 180, 50, "Ball Right", "ball",(1,0,ORANGE)),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Output", "output",None),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Erase", "erase",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Simulate", "mode",None)
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Simulate", "mode",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 9), 180, 50, "Save", "save",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 10), 180, 50, "Load", "load",None)
         
     ]
     
@@ -321,6 +372,10 @@ def main():
                                 tick_count = 0
                             else:
                                 button.label = "Edit"
+                        elif button.type == "save":
+                            save_model(mirrors, balls, outputs)
+                        elif button.type == "load":
+                            mirrors, balls, outputs = load_model("model.json")
                         else:
                             print("tool button")
                             for b in menuButtons:
