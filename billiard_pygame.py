@@ -293,8 +293,14 @@ class InputBox:
         
         
 class PromptBox:
-    def __init__(self, file_prompt = 'Enter filename:'):
-        self.prompt = file_prompt
+    def __init__(self, prompt_type):
+        self.prompt_type = prompt_type
+        if prompt_type == "file":
+            self.prompt = "Enter filename (should be a .json file):"
+        elif prompt_type == "grid":
+            self.prompt = "Enter new grid size(25 - 100):"
+        print(self.prompt)
+        print(self.prompt_type)
         self.prompt_font = pygame.font.Font(None, 36)
         self.instruction_font = pygame.font.Font(None, 24)
         self.active = False
@@ -320,14 +326,19 @@ class PromptBox:
                     return None
                 
                 result = self.input_box.event_handle(event)
-                
+                print(result)
                 if result == "cancelled":
                     self.active = False
                     return None
-                elif result is not None:
+                elif result is not None and self.prompt_type == "file":
                     self.active = False
                     if not result.endswith('.json'):
                         result += '.json'
+                    return result
+                elif result is not None and self.prompt_type == "grid":
+                    result = int(result)
+                    if result < 25 or result > 100:
+                        print("Invalid grid size, enter number between 25 and 100")
                     return result
                 
             screen.blit(background, (0,0))
@@ -430,16 +441,26 @@ def load_model(filename):
         print(f'{filename} contains invalid data format: {e}')
     return [], [], [], []
 
-def main():
-   
-    global balls, mirrors, outputs, inputs
-    edit_mode = True
-    selected_tool = None
+GRID_SIZE = 25  # 25x25 grid
+CELL_SIZE = 35
+LABEL_MARGIN = 30  # Space for labels
+TITLE_MARGIN = 40  # Space for title at top
+MENU_WIDTH = 200
+GRID_WIDTH = GRID_SIZE * CELL_SIZE + LABEL_MARGIN 
+WINDOW_WIDTH = GRID_SIZE * CELL_SIZE + MENU_WIDTH
+WINDOW_HEIGHT = GRID_SIZE * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
+def change_grid_size(new_grid_size, menu_buttons,screen):
+    global GRID_SIZE, CELL_SIZE, LABEL_MARGIN, TITLE_MARGIN, MENU_WIDTH, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT
     
+    GRID_SIZE = new_grid_size
+    GRID_WIDTH = GRID_SIZE * CELL_SIZE + LABEL_MARGIN 
+    WINDOW_WIDTH = GRID_SIZE * CELL_SIZE + MENU_WIDTH
+    WINDOW_HEIGHT = GRID_SIZE * CELL_SIZE + LABEL_MARGIN + TITLE_MARGIN
     
     button_y = TITLE_MARGIN + 10
     button_spacing = 50
-    menuButtons = [
+    
+    menu_buttons = [
         MenuButton(GRID_WIDTH + 10, button_y, 180, 50, "Mirror /", "mirror", "/"),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing), 180, 50, "Mirror \\", "mirror", "\\"),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 2), 180, 50, "Ball Up","ball", (0,-1,RED)),
@@ -451,7 +472,39 @@ def main():
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Erase", "erase",None),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 9), 180, 50, "Simulate", "mode",None),
         MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 10), 180, 50, "Save", "save",None),
-        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 11), 180, 50, "Load", "load",None)
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 11), 180, 50, "Load", "load",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 12), 180, 50, "Change Grid", "grid",None)
+        
+    ]
+    
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    pygame.display.set_caption("Billiard Ball Simulator")
+    
+    return menu_buttons
+    
+def main():
+   
+    global balls, mirrors, outputs, inputs
+    edit_mode = True
+    selected_tool = None
+    
+    
+    button_y = TITLE_MARGIN + 10
+    button_spacing = 50
+    menu_buttons = [
+        MenuButton(GRID_WIDTH + 10, button_y, 180, 50, "Mirror /", "mirror", "/"),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing), 180, 50, "Mirror \\", "mirror", "\\"),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 2), 180, 50, "Ball Up","ball", (0,-1,RED)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 3), 180, 50, "Ball Down", "ball", (0,1,BLUE)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 4), 180, 50, "Ball Left", "ball", (-1,0,GREEN)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 5), 180, 50, "Ball Right", "ball",(1,0,ORANGE)),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 6), 180, 50, "Output", "output",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 7), 180, 50, "Input", "input",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 8), 180, 50, "Erase", "erase",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 9), 180, 50, "Simulate", "mode",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 10), 180, 50, "Save", "save",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 11), 180, 50, "Load", "load",None),
+        MenuButton(GRID_WIDTH + 10, button_y + (button_spacing * 12), 180, 50, "Change Grid", "grid",None)
         
     ]
     
@@ -481,7 +534,7 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
         
-                for button in menuButtons:
+                for button in menu_buttons:
                     if button.on_click(mouse_pos):
                         print("mode button")
                         if button.type == "mode":
@@ -496,18 +549,23 @@ def main():
                             else:
                                 button.label = "Edit"
                         elif button.type == "save":
-                            file_prompt = PromptBox("Enter filename:")
+                            file_prompt = PromptBox("file")
                             filename = file_prompt.show_prompt(screen)
                             if filename:
                                 save_model(mirrors, balls, outputs,inputs, filename)
                         elif button.type == "load":
-                            file_prompt = PromptBox("Enter filename:")
+                            file_prompt = PromptBox("file")
                             filename = file_prompt.show_prompt(screen)
                             if filename:
                                 mirrors, balls, outputs, inputs = load_model(filename)
+                        elif button.type == "grid":
+                            grid_prompt = PromptBox("grid")
+                            new_grid_size = grid_prompt.show_prompt(screen)
+                            if new_grid_size:
+                                menu_buttons = change_grid_size(new_grid_size,menu_buttons,screen)
                         else:
                             print("tool button")
-                            for b in menuButtons:
+                            for b in menu_buttons:
                                 b.selected = False
                             button.selected = True
                             selected_tool = button
@@ -648,7 +706,7 @@ def main():
             ball.draw(screen)
         for mirror in mirrors:
             mirror.draw(screen)
-        for b in menuButtons:
+        for b in menu_buttons:
             b.draw(screen)
         
         pygame.display.flip()
