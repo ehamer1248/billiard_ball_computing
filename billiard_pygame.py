@@ -470,6 +470,8 @@ def change_grid_size(new_grid_size, balls, mirrors, outputs, inputs):
     for b in balls:
         b.reset()
     return balls, mirrors, outputs, inputs
+
+
 def main():
    
     global balls, mirrors, outputs, inputs
@@ -489,10 +491,11 @@ def main():
         MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 6), 180, 50, "Output", "output",None),
         MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 7), 180, 50, "Input", "input",None),
         MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 8), 180, 50, "Erase", "erase",None),
-        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 9), 180, 50, "Simulate", "mode",None),
-        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 10), 180, 50, "Save", "save",None),
-        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 11), 180, 50, "Load", "load",None),
-        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 12), 180, 50, "Change Grid", "grid",None)
+        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 9), 180, 50, "Erase All", "erase_all",None),
+        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 10), 180, 50, "Simulate", "mode",None),
+        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 11), 180, 50, "Save", "save",None),
+        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 12), 180, 50, "Load", "load",None),
+        MenuButton(GRID_WIDTH + 50, button_y + (button_spacing * 13), 180, 50, "Change Grid", "grid",None)
         
     ]
     
@@ -551,6 +554,9 @@ def main():
                             new_grid_size = grid_prompt.show_prompt(screen)
                             if new_grid_size:
                                 balls, mirrors, outputs, inputs = change_grid_size(new_grid_size, balls, mirrors, outputs, inputs)
+                        elif button.type == "erase_all" and edit_mode:
+                            balls, mirrors, outputs, inputs = [], [], [], []
+
                         else:
                             print("tool button")
                             for b in menu_buttons:
