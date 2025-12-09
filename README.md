@@ -45,7 +45,7 @@ The vision is to create software for Billiard Ball Computing that will provide s
 - Press r to reverse balls in motion
 - Output squares will stop balls from moving once reached
 
-## To be Added
+## To Be Added
 - Color controls for each object
 - More visually appealing UI
 
