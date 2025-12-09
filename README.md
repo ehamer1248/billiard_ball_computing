@@ -33,3 +33,19 @@ To do this, our current goals are to:
 ## Vision
 
 The vision is to create software for Billiard Ball Computing that will provide students and people interested in reversible computing a way to see and explore the concepts visually. Further, we want to create a community around Billiard Ball Computing similar to the Minecraft Redstone Computing community where people can design and then share their creations with others. For this reason we will be releasing this software under an open source license to both push forward the development of the simulator and give any one the chance to contribute to it.
+
+## Current Features
+- Added dynamic UI for adding and removing balls, mirrors, inputs, and outputs.
+- Separate Simulation and Edit modes
+- Ability to change grid size
+- Load and save designs using JSON format
+
+## Simulation Controls
+- Press space to start simulation
+- Press r to reverse balls in motion
+- Output squares will stop balls from moving once reached
+
+## To be Added
+- Color controls for each object
+- More visually appealing UI
+
