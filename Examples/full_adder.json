@@ -1,0 +1,109 @@
+{
+  "grid": 25,
+  "mirrors": [
+    {
+      "row": 6,
+      "col": 2,
+      "orientation": "\\"
+    },
+    {
+      "row": 8,
+      "col": 3,
+      "orientation": "\\"
+    },
+    {
+      "row": 10,
+      "col": 7,
+      "orientation": "\\"
+    },
+    {
+      "row": 4,
+      "col": 7,
+      "orientation": "\\"
+    },
+    {
+      "row": 1,
+      "col": 8,
+      "orientation": "/"
+    },
+    {
+      "row": 10,
+      "col": 14,
+      "orientation": "/"
+    },
+    {
+      "row": 8,
+      "col": 15,
+      "orientation": "/"
+    },
+    {
+      "row": 1,
+      "col": 15,
+      "orientation": "\\"
+    },
+    {
+      "row": 6,
+      "col": 20,
+      "orientation": "\\"
+    }
+  ],
+  "balls": [
+    {
+      "row": 4,
+      "col": 0,
+      "dx": 1,
+      "dy": 0,
+      "color": [
+        255,
+        165,
+        100
+      ]
+    },
+    {
+      "row": 20,
+      "col": 8,
+      "dx": 0,
+      "dy": -1,
+      "color": [
+        255,
+        100,
+        100
+      ]
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "dx": 0,
+      "dy": 1,
+      "color": [
+        100,
+        150,
+        255
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "row": 1,
+      "col": 14
+    },
+    {
+      "row": 9,
+      "col": 20
+    }
+  ],
+  "inputs": [
+    {
+      "row": 1,
+      "col": 3
+    },
+    {
+      "row": 4,
+      "col": 0
+    },
+    {
+      "row": 20,
+      "col": 8
+    }
+  ]
+}
